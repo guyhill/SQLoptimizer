@@ -281,7 +281,56 @@ class JoinNode(TreeNode):
 
 class ConditionalNode(TreeNode):
 
-    def __init__(self, )
+    def __init__(self, table = None):
+        super().__init__(table)
+    
+    def add_conditions(self, lvalues, rvalues):
+        # Assume lvalue and rvalue are both lists of the same length
+        self.lvalues = lvalues
+        self.rvalues = rvalues
+
+    def combine(self, other):
+        if isinstance(other, ConditionalNode):
+            self.lvalues += other.lvalues
+            self.rvalues += other.rvalues
+        elif isinstance(other, ProjectionNode):
+            pass
+        elif isinstance(other, RenameNode):
+            for colspec, alias in other.arguments.items():
+                renamed_colspec = ColSpec(colspec.table, alias)
+                try:
+                    i = self.lvalues.index(renamed_colspec)
+                    self.lvalues[i] = colspec
+                except ValueError:
+                    pass
+                try:
+                    i = self.rvalues.index(renamed_colspec)
+                    self.rvalues[i] = colspec
+                except ValueError:
+                    pass
+
+    def __str__(self):
+        result = ""
+        for lvalue, rvalue in zip(self.lvalues, self.rvalues):
+            if result != "":
+                result += " AND "
+                if isinstance(lvalue, ColSpec):
+                    lvalue_str = f"{lvalue.table}.{lvalue.column}"
+                elif isinstance(lvalue, str):
+                    lvalue_str = f'"{lvalue}"''
+                else:
+                    lvalue_str = str(lvalue)
+                if isinstance(rvalue, ColSpec):
+                    rvalue_str = f"{rvalue.table}.{rvalue.column}"
+                elif isinstance(rvalue, str):
+                    rvalue_str = f'"{rvalue}"''
+                else:
+                    rvalue_str = str(rvalue)
+                     
+            result += f"({lvalue_str} == {rvalue_str})"
+        return result
+
+
 def gen_conditional(expr):
     
     if expr.data == NodeType.CONSTANT:
